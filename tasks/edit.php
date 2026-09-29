@@ -13,6 +13,26 @@ if (!isset($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
 
+$id = (int)($_GET['id'] ?? $_POST['id'] ?? 0);
+
+$stmt = $db->prepare("
+    SELECT *
+    FROM tasks
+    WHERE id = :id
+      AND user_id = :user_id
+");
+
+$stmt->execute([
+    ':id' => $id,
+    ':user_id' => $_SESSION['user_id']
+]);
+
+$task = $stmt->fetch();
+
+if (!$task) {
+    die('Task not found.');
+}
+
 $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -26,7 +46,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $title = trim($_POST['title'] ?? '');
     $description = trim($_POST['description'] ?? '');
-    $status = $_POST['status'] ?? 'pending';
+    $status = $_POST['status'] ?? '';
 
     $allowedStatuses = [
         'pending',
@@ -34,29 +54,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'completed'
     ];
 
-    if (strlen($title) < 1) {
+    if ($title === '') {
         $error = 'Title is required.';
     } elseif (!in_array($status, $allowedStatuses, true)) {
         $error = 'Invalid status.';
     } else {
 
         $stmt = $db->prepare("
-            INSERT INTO tasks
-                (user_id, title, description, status)
-            VALUES
-                (:user_id, :title, :description, :status)
+            UPDATE tasks
+            SET title = :title,
+                description = :description,
+                status = :status
+            WHERE id = :id
+              AND user_id = :user_id
         ");
 
         $stmt->execute([
-            ':user_id' => $_SESSION['user_id'],
             ':title' => $title,
             ':description' => $description,
-            ':status' => $status
+            ':status' => $status,
+            ':id' => $id,
+            ':user_id' => $_SESSION['user_id']
         ]);
 
         $log = date('Y-m-d H:i:s')
             . " | User: " . $_SESSION['user_id']
-            . " | Created task: " . $title
+            . " | Updated task ID: " . $id
             . PHP_EOL;
 
         file_put_contents(
@@ -75,7 +98,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Create Task</title>
+    <title>Edit Task</title>
     <link rel="stylesheet" href="../style.css">
 </head>
 
@@ -83,13 +106,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 <div class="container">
 
-    <h1>Create Task</h1>
+    <h1>Edit Task</h1>
 
     <?php if ($error): ?>
         <p class="error"><?= htmlspecialchars($error) ?></p>
     <?php endif; ?>
 
     <form method="POST">
+
+        <input
+            type="hidden"
+            name="id"
+            value="<?= $task['id'] ?>"
+        >
 
         <input
             type="hidden"
@@ -100,33 +129,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <input
             type="text"
             name="title"
-            placeholder="Title"
+            value="<?= htmlspecialchars($task['title']) ?>"
             required
         >
 
-        <textarea
-            name="description"
-            placeholder="Description"
-        ></textarea>
+        <textarea name="description"><?= htmlspecialchars($task['description']) ?></textarea>
 
         <select name="status">
 
-            <option value="pending">
+            <option
+                value="pending"
+                <?= $task['status'] === 'pending' ? 'selected' : '' ?>
+            >
                 Pending
             </option>
 
-            <option value="in_progress">
+            <option
+                value="in_progress"
+                <?= $task['status'] === 'in_progress' ? 'selected' : '' ?>
+            >
                 In progress
             </option>
 
-            <option value="completed">
+            <option
+                value="completed"
+                <?= $task['status'] === 'completed' ? 'selected' : '' ?>
+            >
                 Completed
             </option>
 
         </select>
 
         <button type="submit">
-            Create
+            Save changes
         </button>
 
     </form>
