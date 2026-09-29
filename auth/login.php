@@ -23,11 +23,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $email = trim($_POST['email'] ?? '');
         $password = $_POST['password'] ?? '';
 
-        $stmt = $db->prepare("
+        $stmt = $db->prepare(
+            "
             SELECT *
             FROM users
             WHERE email = :email
-        ");
+            ");
 
         $stmt->execute([
             ':email' => $email
@@ -92,10 +93,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     </form>
 
-    <p>
-        Don't have an account?
         <a href="register.php">Register</a>
-    </p>
 
 </div>
 

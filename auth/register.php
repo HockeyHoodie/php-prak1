@@ -16,14 +16,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = trim($_POST['email'] ?? '');
     $password = $_POST['password'] ?? '';
 
-    if (strlen($username) < 3) {
-        $error = 'Username must contain at least 3 characters.';
+    if (strlen($username) < 2) {
+        $error = 'Username must contain at least 2 characters.';
     } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $error = 'Invalid email address.';
+    } elseif (strlen($password) < 6 && (bool) !preg_match('/[^a-zA-Z0-9]/', $password)) {
+        $error = 'Password must contain at least 6 characters and 1 special character.';
     } elseif (strlen($password) < 6) {
         $error = 'Password must contain at least 6 characters.';
+    } elseif ((bool) !preg_match('/[^a-zA-Z0-9]/', $password)) {
+        $error = 'Password must contain at least 1 special character.';
     } else {
-
         $stmt = $db->prepare("
             SELECT id FROM users
             WHERE username = :username OR email = :email
@@ -64,53 +67,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 <!DOCTYPE html>
 <html>
+
 <head>
     <title>Register</title>
     <link rel="stylesheet" href="../style.css">
 </head>
+
 <body>
 
-<div class="container">
+    <div class="container">
 
-    <h1>Register</h1>
+        <h1>Register</h1>
 
-    <?php if ($error): ?>
-        <p class="error"><?= htmlspecialchars($error) ?></p>
-    <?php endif; ?>
+        <?php if ($error): ?>
+            <p class="error"><?= htmlspecialchars($error) ?></p>
+        <?php endif; ?>
 
-    <form method="POST">
+        <form method="POST">
 
-        <input
-            type="text"
-            name="username"
-            placeholder="Username"
-            required
-        >
+            <input
+                type="text"
+                name="username"
+                placeholder="Username"
+                required>
 
-        <input
-            type="email"
-            name="email"
-            placeholder="Email"
-            required
-        >
+            <input
+                type="email"
+                name="email"
+                placeholder="Email"
+                required>
 
-        <input
-            type="password"
-            name="password"
-            placeholder="Password"
-            required
-        >
+            <input
+                type="password"
+                name="password"
+                placeholder="Password"
+                required>
 
-        <button type="submit">Register</button>
+            <button type="submit">Register</button>
 
-    </form>
+        </form>
 
-    <p>
-        Already have an account?
-        <a href="login.php">Login</a>
-    </p>
+        <p>
+            <a href="login.php">Login</a>
+        </p>
 
-</div>
+    </div>
 
 </body>
+
 </html>
